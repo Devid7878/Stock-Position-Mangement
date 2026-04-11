@@ -6,11 +6,11 @@ import PositionCard from '../components/PositionCard';
 import AddPositionModal from '../components/AddPositionModal';
 import PositionSizeCalc from '../components/PositionSizeCalc';
 import AnalyticsPage from './AnalyticsPage';
-import { formatCurrency, formatPercent } from '../utils/calculations';
+import { formatCurrency, formatPercent, formatRMultiple } from '../utils/calculations';
 import {
-  Plus, RefreshCw, LayoutGrid, List, AlertCircle,
+  Plus, RefreshCw, LayoutGrid, List,
   LogOut, TrendingUp, Sun, Moon, Calculator, Table,
-  BarChart2, Wallet
+  BarChart2, Wallet, ExternalLink
 } from 'lucide-react';
 
 export default function PositionsPage({ onSelectPosition }) {
@@ -28,10 +28,7 @@ export default function PositionsPage({ onSelectPosition }) {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('active');
 
-  // Account Capital Persistence
-  const [capital, setCapital] = useState(() => {
-    return parseFloat(localStorage.getItem('terminal_capital')) || 1000000;
-  });
+  const [capital, setCapital] = useState(() => parseFloat(localStorage.getItem('terminal_capital')) || 1000000);
   const [showCapitalEdit, setShowCapitalEdit] = useState(false);
 
   const handleTabChange = (tab) => {
@@ -42,18 +39,14 @@ export default function PositionsPage({ onSelectPosition }) {
 
   const handleCapitalUpdate = (val) => {
     const num = parseFloat(val);
-    if (!isNaN(num)) {
-      setCapital(num);
-      localStorage.setItem('terminal_capital', num.toString());
-    }
+    if (!isNaN(num)) { setCapital(num); localStorage.setItem('terminal_capital', num.toString()); }
   };
 
-  // ── Active Portfolio Stats ────────────────────────────────
+  // ── Stats Calculation ───────────────────────────────────
   const stats = useMemo(() => {
-    let totalValue = 0, totalPnl = 0, openRisk = 0, riskFreeCount = 0, atRiskCount = 0;
+    let totalPnl = 0, openRisk = 0, riskFreeCount = 0, atRiskCount = 0;
     
     positions.forEach((p) => {
-      const isClosed = p.status === 'closed';
       const cmp = getLivePrice(p.symbol_token, p.entry_price);
       const totalShares = (p.shares || 0) + (p.pyramid_shares || 0);
       const realized = parseFloat(p.realized_pnl || 0);
@@ -61,9 +54,7 @@ export default function PositionsPage({ onSelectPosition }) {
       if (p.status === 'active') {
         const cost = (p.entry_price * p.shares) + ((p.pyramid_entry || 0) * (p.pyramid_shares || 0));
         const value = cmp * totalShares;
-        const runningPnl = value - cost;
-        totalValue += value;
-        totalPnl += runningPnl + realized;
+        totalPnl += (value - cost) + realized;
 
         const avgPrice = totalShares > 0 ? cost / totalShares : p.entry_price;
         if (p.stop_loss >= avgPrice) riskFreeCount++; else {
@@ -71,21 +62,16 @@ export default function PositionsPage({ onSelectPosition }) {
           openRisk += Math.abs(cmp - p.stop_loss) * totalShares;
         }
       } else {
-        // Closed trades contribute to total realized P/L
-        const closedPnl = ((p.exit_price - p.entry_price) * p.shares) + realized;
-        totalPnl += closedPnl;
+        totalPnl += ((p.exit_price - p.entry_price) * p.shares) + realized;
       }
     });
 
-    const accountIncrement = capital > 0 ? (totalPnl / capital) * 100 : 0;
-    return { totalValue, totalPnl, openRisk, riskFreeCount, atRiskCount, accountIncrement };
+    return { totalPnl, openRisk, riskFreeCount, atRiskCount, accountIncrement: (totalPnl / capital) * 100 };
   }, [positions, getLivePrice, capital]);
 
-  const handleRefreshAll = async () => {
-    setRefreshing(true);
-    await loadPositions();
-    setRefreshing(false);
-  };
+  const closedPositions = useMemo(() => 
+    positions.filter(p => p.status === 'closed').sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at))
+  , [positions]);
 
   return (
     <div className="positions-page">
@@ -100,95 +86,108 @@ export default function PositionsPage({ onSelectPosition }) {
             <div className="brand-name">Trader Terminal</div>
           </div>
         </div>
-
         <div className="navbar-center">
           <button className={`nav-tab ${activeTab === 'active' ? 'active' : ''}`} onClick={() => handleTabChange('active')}>Active</button>
           <button className={`nav-tab ${activeTab === 'closed' ? 'active' : ''}`} onClick={() => handleTabChange('closed')}><Table size={13} /> Trades</button>
           <button className={`nav-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => handleTabChange('analytics')}><BarChart2 size={13} /> Analytics</button>
           <button className={`nav-tab ${activeTab === 'calculator' ? 'active' : ''}`} onClick={() => handleTabChange('calculator')}><Calculator size={13} /> Calc</button>
         </div>
-
         <div className="navbar-right">
-          <button className="btn-icon" onClick={toggleTheme} title={theme === 'dark' ? 'Light' : 'Dark'}>
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button className="btn-secondary btn-sm" onClick={handleRefreshAll} disabled={refreshing}>
-            <RefreshCw size={14} className={refreshing ? 'spinning' : ''} />
-          </button>
-          <button className="btn-add" onClick={() => setShowAddModal(true)}>
-            <Plus size={14} /> Add Trade
-          </button>
-          <button className="btn-icon-sm" onClick={signOut} title="Sign out"><LogOut size={14} /></button>
+          <button className="btn-icon" onClick={toggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</button>
+          <button className="btn-secondary btn-sm" onClick={() => loadPositions()}><RefreshCw size={14} /></button>
+          <button className="btn-add" onClick={() => setShowAddModal(true)}><Plus size={14} /> Add Trade</button>
+          <button className="btn-icon-sm" onClick={signOut}><LogOut size={14} /></button>
         </div>
       </nav>
-      
-      {activeTab === 'calculator' && <main className="positions-main"><PositionSizeCalc /></main>}
-      {activeTab === 'analytics' && <AnalyticsPage />}
 
-      {(activeTab === 'active' || activeTab === 'closed' || activeTab === 'all') && (
-        <>
-          {activeTab === 'active' && (
+      <main className="positions-main">
+        {activeTab === 'calculator' && <PositionSizeCalc />}
+        {activeTab === 'analytics' && <AnalyticsPage />}
+
+        {activeTab === 'active' && (
+          <>
             <div className="portfolio-summary">
               <div className="summary-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="sc-label">Total Account Increment</span>
+                  <span className="sc-label">Account Increment</span>
                   <button className="btn-icon-sm" onClick={() => setShowCapitalEdit(!showCapitalEdit)}><Wallet size={12} /></button>
                 </div>
-                <span className={`sc-value ${stats.totalPnl >= 0 ? 'positive' : 'negative'}`}>
-                  {formatPercent(stats.accountIncrement)}
-                </span>
-                <span className={`sc-sub ${stats.totalPnl >= 0 ? 'positive' : 'negative'}`}>
-                   Total Gain/Loss: {formatCurrency(stats.totalPnl, 0)}
-                </span>
-                {showCapitalEdit && (
-                  <div className="capital-edit" style={{ marginTop: 10 }}>
-                    <input 
-                      type="number" 
-                      defaultValue={capital} 
-                      onBlur={(e) => { handleCapitalUpdate(e.target.value); setShowCapitalEdit(false); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { handleCapitalUpdate(e.target.value); setShowCapitalEdit(false); } }}
-                      placeholder="Enter Capital"
-                      autoFocus
-                      className="sl-input"
-                    />
-                  </div>
-                )}
+                <span className={`sc-value ${stats.totalPnl >= 0 ? 'positive' : 'negative'}`}>{formatPercent(stats.accountIncrement)}</span>
+                <span className="sc-sub">Gain/Loss: {formatCurrency(stats.totalPnl, 0)}</span>
+                {showCapitalEdit && <input type="number" defaultValue={capital} onBlur={(e) => { handleCapitalUpdate(e.target.value); setShowCapitalEdit(false); }} autoFocus className="sl-input" style={{ marginTop: 8 }} />}
               </div>
-
               <div className="summary-card">
                 <span className="sc-label">Risk Status</span>
-                <span className="sc-value" style={{ color: stats.atRiskCount === 0 ? 'var(--green)' : 'var(--orange)' }}>
-                   {stats.atRiskCount === 0 ? 'RISK FREE ✅' : `${stats.atRiskCount} At Risk`}
-                </span>
-                <span className="sc-sub neutral">{stats.riskFreeCount} Protected · {stats.atRiskCount} Open</span>
+                <span className="sc-value" style={{ color: stats.atRiskCount === 0 ? 'var(--green)' : 'var(--orange)' }}>{stats.atRiskCount === 0 ? 'RISK FREE' : `${stats.atRiskCount} At Risk`}</span>
+                <span className="sc-sub">{stats.riskFreeCount} Protected</span>
               </div>
-
               <div className="summary-card">
                 <span className="sc-label">Max Open Risk</span>
                 <span className="sc-value" style={{ color: 'var(--red)' }}>{formatCurrency(stats.openRisk, 0)}</span>
-                <span className="sc-sub neutral">ESTIMATED SL DRAWDOWN</span>
+                <span className="sc-sub">TOTAL POTENTIAL DRAWDOWN</span>
               </div>
             </div>
-          )}
 
-          <main className="positions-main">
-             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-                <div className="view-toggle">
-                  <button className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}><LayoutGrid size={14} /></button>
-                  <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}><List size={14} /></button>
-                </div>
-             </div>
-
-            {loading && !filteredPositions.length && <div className="loading-state"><div className="spinner large" /><span>Loading...</span></div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <div className="view-toggle">
+                <button className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}><LayoutGrid size={13} /></button>
+                <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}><List size={13} /></button>
+              </div>
+            </div>
 
             <div className={`positions-grid ${viewMode === 'list' ? 'list-view' : ''}`}>
-              {filteredPositions.map((pos) => (
-                <PositionCard key={pos.id} position={pos} onClick={() => onSelectPosition(pos.id)} />
-              ))}
+              {filteredPositions.map(p => <PositionCard key={p.id} position={p} onClick={() => onSelectPosition(p.id)} />)}
             </div>
-          </main>
-        </>
-      )}
+          </>
+        )}
+
+        {activeTab === 'closed' && (
+          <div className="trades-container">
+            <h2 className="section-title">Trade History</h2>
+            <div className="table-wrap">
+              <table className="trades-table">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Strategy</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th>P&L %</th>
+                    <th>R-Mult</th>
+                    <th>Realized P&L</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {closedPositions.map(p => {
+                    const pnlAmt = ((p.exit_price - p.entry_price) * p.shares) + parseFloat(p.realized_pnl || 0);
+                    const pnlPct = ((p.exit_price - p.entry_price) / p.entry_price) * 100;
+                    const initialRisk = (p.initial_risk_amount && parseFloat(p.initial_risk_amount) !== 0) ? p.initial_risk_amount : Math.abs(p.entry_price - (p.original_sl || p.stop_loss)) * p.shares;
+                    const rMult = initialRisk > 0 ? pnlAmt / initialRisk : 0;
+                    return (
+                      <tr key={p.id}>
+                        <td className="bold">{p.symbol}</td>
+                        <td><span className="strategy-badge">{p.strategy}</span></td>
+                        <td>{formatCurrency(p.entry_price)}</td>
+                        <td>{formatCurrency(p.exit_price)}</td>
+                        <td className={pnlPct >= 0 ? 'positive' : 'negative'}>{formatPercent(pnlPct)}</td>
+                        <td>{formatRMultiple(rMult)}</td>
+                        <td className={pnlAmt >= 0 ? 'positive' : 'negative'}>{formatCurrency(pnlAmt, 0)}</td>
+                        <td>
+                          <button className="link-btn" onClick={() => onSelectPosition(p.id)}>
+                            <ExternalLink size={14} /> View Chart
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {!closedPositions.length && <div className="empty-table">No closed trades found.</div>}
+            </div>
+          </div>
+        )}
+      </main>
 
       {showAddModal && <AddPositionModal onClose={() => setShowAddModal(false)} />}
     </div>
