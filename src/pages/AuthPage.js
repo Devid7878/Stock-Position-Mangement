@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../services/supabase';
+import { Upload, Camera, Building } from 'lucide-react';
 
-const COMPANY_NAME = process.env.REACT_APP_COMPANY_NAME || 'VALVO';
-const LOGO_URL = process.env.REACT_APP_LOGO_URL;
+const DEFAULT_COMPANY = process.env.REACT_APP_COMPANY_NAME || 'Trade Intelligence';
+const DEFAULT_LOGO = process.env.REACT_APP_LOGO_URL;
 
 export default function AuthPage() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
@@ -10,20 +12,67 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadLogo = async (userId) => {
+    if (!logoFile) return null;
+    const fileExt = logoFile.name.split('.').pop();
+    const fileName = `${userId}/logo-${Math.random()}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from('vvv_icons')
+      .upload(fileName, logoFile);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from('vvv_icons').getPublicUrl(fileName);
+    return data.publicUrl;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setLoading(true);
+    
     try {
       if (mode === 'login') {
         await signInWithEmail(email, password);
       } else if (mode === 'signup') {
-        await signUpWithEmail(email, password, fullName);
+        // Sign up with basic info first
+        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { 
+              full_name: fullName,
+              company_name: companyName || DEFAULT_COMPANY
+            },
+          },
+        });
+
+        if (signUpError) throw signUpError;
+
+        if (user && logoFile) {
+          const logoUrl = await uploadLogo(user.id);
+          await supabase.auth.updateUser({
+            data: { company_logo: logoUrl }
+          });
+        }
+
         setSuccess('Check your email to confirm your account!');
       } else if (mode === 'forgot') {
         await resetPassword(email);
@@ -41,8 +90,8 @@ export default function AuthPage() {
       <div className="auth-card">
         <div className="auth-logo">
           <div className="logo-mark">
-            {LOGO_URL ? (
-              <img src={LOGO_URL} alt="Company Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            {DEFAULT_LOGO ? (
+              <img src={DEFAULT_LOGO} alt="Branding" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : (
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                 <rect width="32" height="32" rx="8" fill="#6366f1" />
@@ -51,40 +100,68 @@ export default function AuthPage() {
             )}
           </div>
           <div className="logo-text">
-            <span className="logo-brand">{COMPANY_NAME}</span>
+            <span className="logo-brand">{DEFAULT_COMPANY}</span>
             <span className="logo-sub">Position Manager</span>
           </div>
         </div>
 
         <h2 className="auth-title">
           {mode === 'login' && 'Welcome back'}
-          {mode === 'signup' && 'Create account'}
+          {mode === 'signup' && 'Register Trading Firm'}
           {mode === 'forgot' && 'Reset password'}
         </h2>
-        <p className="auth-subtitle">
-          {mode === 'login' && `Sign in to ${COMPANY_NAME} terminal`}
-          {mode === 'signup' && 'Start tracking your portfolio'}
-          {mode === 'forgot' && 'Enter your email to reset'}
-        </p>
 
         {error && <div className="auth-error">{error}</div>}
         {success && <div className="auth-success">{success}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
           {mode === 'signup' && (
-            <div className="form-group">
-              <label>Full Name</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-                required
-              />
-            </div>
+            <>
+              <div className="form-group">
+                <label>Company Name</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="e.g. Valvo Intel"
+                    required
+                    style={{ paddingLeft: 36 }}
+                  />
+                  <Building size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Company Logo</label>
+                <div className="logo-upload-box" onClick={() => document.getElementById('logo-input').click()}>
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Preview" className="logo-preview-img" />
+                  ) : (
+                    <div className="upload-placeholder">
+                      <Upload size={20} />
+                      <span>Upload Logo</span>
+                    </div>
+                  )}
+                  <input id="logo-input" type="file" accept="image/*" onChange={handleFileChange} hidden />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginTop: 20 }}>
+                <label>Owner Full Name</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+            </>
           )}
+
           <div className="form-group">
-            <label>Email</label>
+            <label>Email Address</label>
             <input
               type="email"
               value={email}
@@ -93,6 +170,7 @@ export default function AuthPage() {
               required
             />
           </div>
+
           {mode !== 'forgot' && (
             <div className="form-group">
               <label>Password</label>
@@ -107,41 +185,26 @@ export default function AuthPage() {
             </div>
           )}
 
-          {mode === 'login' && (
-            <button type="button" className="forgot-link" onClick={() => setMode('forgot')}>
-              Forgot password?
-            </button>
-          )}
-
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'}
+          <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: 12 }}>
+            {loading ? 'Processing...' : mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Get Reset Link'}
           </button>
         </form>
 
-        {mode !== 'forgot' && (
-          <>
-            <div className="auth-divider"><span>or</span></div>
-            <button className="btn-google" onClick={signInWithGoogle} disabled={loading}>
-              <svg width="20" height="20" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
+        {mode === 'login' && (
+          <div className="auth-footer-links">
+             <button className="forgot-link" onClick={() => setMode('forgot')}>Forgot password?</button>
+             <div className="auth-divider"><span>or</span></div>
+             <button className="btn-google" onClick={signInWithGoogle} disabled={loading}>
               Continue with Google
             </button>
-          </>
+          </div>
         )}
 
         <p className="auth-switch">
-          {mode === 'login' && (
-            <>Don't have an account? <button onClick={() => setMode('signup')}>Sign up</button></>
-          )}
-          {mode === 'signup' && (
-            <>Already have an account? <button onClick={() => setMode('login')}>Sign in</button></>
-          )}
-          {mode === 'forgot' && (
-            <>Remember your password? <button onClick={() => setMode('login')}>Sign in</button></>
+          {mode === 'login' ? (
+            <>New firm? <button onClick={() => setMode('signup')}>Register now</button></>
+          ) : (
+            <>Already registered? <button onClick={() => setMode('login')}>Sign in</button></>
           )}
         </p>
       </div>

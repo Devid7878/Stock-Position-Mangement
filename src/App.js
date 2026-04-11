@@ -11,6 +11,17 @@ function AppRoutes() {
   const { user, loading } = useAuth();
   const [selectedPositionId, setSelectedPositionId] = useState(null);
 
+  React.useEffect(() => {
+    if (user?.user_metadata) {
+      const company = user.user_metadata.company_name || 'VALVO';
+      const logo = user.user_metadata.company_logo;
+      document.title = `${company} | Trader Terminal`;
+      
+      const favicon = document.getElementById('favicon');
+      if (favicon && logo) favicon.href = logo;
+    }
+  }, [user]);
+
   if (loading) {
     return (
       <div className="app-loading">

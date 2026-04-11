@@ -78,12 +78,20 @@ export default function PositionsPage({ onSelectPosition }) {
     <div className="positions-page">
       <nav className="navbar">
         <div className="navbar-brand">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="8" fill="#6366f1" />
-            <path d="M8 22L14 10L20 18L24 14" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <div className="logo-mark" style={{ width: 32, height: 32, marginRight: 10 }}>
+            {user?.user_metadata?.company_logo ? (
+              <img src={user.user_metadata.company_logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="8" fill="#6366f1" />
+                <path d="M8 22L14 10L20 18L24 14" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </div>
           <div>
-            <div className="brand-label">VALVO INTELLIGENCE</div>
+            <div className="brand-label" style={{ textTransform: 'uppercase' }}>
+              {user?.user_metadata?.company_name || 'Trade Intelligence'}
+            </div>
             <div className="brand-name">Trader Terminal</div>
           </div>
         </div>
