@@ -13,9 +13,9 @@ import {
   formatRMultiple,
   formatLargeNumber,
 } from '../utils/calculations';
-import { ArrowLeft, RefreshCw, ChevronUp, Plus, Shield, Lock, Trash2, PieChart } from 'lucide-react';
+import { ArrowLeft, Plus, Shield, Lock, PieChart } from 'lucide-react';
 
-const INTERVALS = ['1Y', '2Y', '5Y', 'ALL'];
+
 
 export default function PositionDetail({ positionId, onBack }) {
   const { positions, getLivePrice, editPosition, sellPosition } = usePositions();
@@ -23,7 +23,7 @@ export default function PositionDetail({ positionId, onBack }) {
 
   const isClosed = position?.status === 'closed';
 
-  const [chartInterval, setChartInterval] = useState('1Y');
+  const [chartInterval] = useState('1Y');
   const [showSellConfirm, setShowSellConfirm] = useState(false);
   const [showBookProfit, setShowBookProfit] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -40,7 +40,7 @@ export default function PositionDetail({ positionId, onBack }) {
   const [showSlEdit, setShowSlEdit] = useState(false);
   const [showPyramidEdit, setShowPyramidEdit] = useState(false);
 
-  const { candles, loading: candlesLoading, refetch } = useCandleData(position, chartInterval);
+  const { candles, loading: candlesLoading } = useCandleData(position, chartInterval);
 
   // ── Calculation ──────────────────────────────────────────
   const initialShares = position?.shares || 0;

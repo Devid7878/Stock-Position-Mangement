@@ -4,7 +4,6 @@ import CandlestickChart from './CandlestickChart';
 import { useCandleData } from '../hooks/useCandleData';
 import {
   calcPnlPercent,
-  calcPnlAmount,
   calcRMultiple,
   formatCurrency,
   formatPercent,
@@ -20,10 +19,7 @@ export default function PositionCard({ position, onClick }) {
     () => calcPnlPercent(position.entry_price, cmp),
     [position.entry_price, cmp]
   );
-  const pnlAmount = useMemo(
-    () => calcPnlAmount(position.entry_price, cmp, position.shares),
-    [position.entry_price, cmp, position.shares]
-  );
+
   const rMultiple = useMemo(
     () => calcRMultiple(position.entry_price, cmp, position.original_sl || position.stop_loss),
     [position.entry_price, cmp, position.original_sl, position.stop_loss]

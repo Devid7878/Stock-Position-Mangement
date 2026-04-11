@@ -1,11 +1,11 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { usePositions } from '../context/PositionsContext';
 import { 
-  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell, PieChart, Pie
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell
 } from 'recharts';
-import { formatCurrency, formatPercent, formatRMultiple } from '../utils/calculations';
-import { TrendingUp, AlertCircle, Inbox } from 'lucide-react';
+import { formatCurrency } from '../utils/calculations';
+import { TrendingUp, Inbox } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const { positions } = usePositions();

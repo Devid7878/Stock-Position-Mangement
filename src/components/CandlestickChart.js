@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createChart, CrosshairMode, CandlestickSeries, LineSeries, HistogramSeries } from 'lightweight-charts';
 import { calcEMA, calcSMA } from '../utils/calculations';
 
@@ -173,7 +173,7 @@ export default function CandlestickChart({
         chartRef.current = null;
       }
     };
-  }, [candles, entryPrice, stopLoss, originalSL, pyramidEntry, height, showMAs, compact]);
+  }, [candles, entryPrice, stopLoss, originalSL, pyramidEntry, height, showMAs, compact, onDragEnd]);
 
   return (
     <div className="chart-wrapper" style={{ position: 'relative' }}>
