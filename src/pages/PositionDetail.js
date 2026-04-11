@@ -26,7 +26,6 @@ export default function PositionDetail({ positionId, onBack }) {
   const [chartInterval, setChartInterval] = useState('1Y');
   const [showSellConfirm, setShowSellConfirm] = useState(false);
   const [showBookProfit, setShowBookProfit] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
@@ -79,11 +78,6 @@ export default function PositionDetail({ positionId, onBack }) {
     return { ema5: ema5[ema5.length - 1]?.value, ema10: ema10[ema10.length - 1]?.value, sma20 };
   }, [liveCandles]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
 
   const handleSellAll = async () => {
     setShowSellConfirm(false);

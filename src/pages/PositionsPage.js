@@ -1,31 +1,32 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePositions } from '../context/PositionsContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import PositionCard from '../components/PositionCard';
 import AddPositionModal from '../components/AddPositionModal';
+import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import PositionSizeCalc from '../components/PositionSizeCalc';
 import AnalyticsPage from './AnalyticsPage';
 import { formatCurrency, formatPercent, formatRMultiple } from '../utils/calculations';
 import {
   Plus, RefreshCw, LayoutGrid, List,
-  LogOut, TrendingUp, Sun, Moon, Calculator, Table,
+  LogOut, Sun, Moon, Calculator, Table,
   BarChart2, Wallet, ExternalLink
 } from 'lucide-react';
 
 export default function PositionsPage({ onSelectPosition }) {
   const {
     positions, filteredPositions,
-    loading, error, loadPositions,
+    loadPositions,
     setFilter,
     getLivePrice,
   } = usePositions();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
-  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('active');
 
   const [capital, setCapital] = useState(() => parseFloat(localStorage.getItem('terminal_capital')) || 1000000);
@@ -96,6 +97,19 @@ export default function PositionsPage({ onSelectPosition }) {
           <button className="btn-icon" onClick={toggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</button>
           <button className="btn-secondary btn-sm" onClick={() => loadPositions()}><RefreshCw size={14} /></button>
           <button className="btn-add" onClick={() => setShowAddModal(true)}><Plus size={14} /> Add Trade</button>
+          
+          <div className="user-profile-nav" onClick={() => setShowProfileModal(true)}>
+            <img 
+              src={useMemo(() => (
+                user?.user_metadata?.avatar_url || 
+                `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || 'U'}&background=6366f1&color=fff`
+              ), [user])} 
+              alt="Avatar" 
+              className="nav-avatar" 
+            />
+            <span className="nav-username">{user?.user_metadata?.full_name?.split(' ')[0] || 'User'}</span>
+          </div>
+
           <button className="btn-icon-sm" onClick={signOut}><LogOut size={14} /></button>
         </div>
       </nav>
@@ -190,6 +204,7 @@ export default function PositionsPage({ onSelectPosition }) {
       </main>
 
       {showAddModal && <AddPositionModal onClose={() => setShowAddModal(false)} />}
+      {showProfileModal && <ProfileSettingsModal onClose={() => setShowProfileModal(false)} />}
     </div>
   );
 }

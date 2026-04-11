@@ -208,11 +208,11 @@ class AngelOneService {
       const buffer = data instanceof Blob ? data.arrayBuffer() : Promise.resolve(data);
       buffer.then((ab) => {
         const view = new DataView(ab);
-        const subscriptionMode = view.getUint8(0);
-        const exchangeType = view.getUint8(1);
+        view.getUint8(0); // subscriptionMode
+        view.getUint8(1); // exchangeType
         const tokenBytes = new Uint8Array(ab, 2, 25);
         const token = String.fromCharCode(...tokenBytes).replace(/\0/g, '').trim();
-        const seqNo = view.getBigUint64(27, false);
+        view.getBigUint64(27, false); // seqNo
         const exchangeTimestamp = view.getBigUint64(35, false);
         const ltp = view.getInt32(43, false) / 100;
 

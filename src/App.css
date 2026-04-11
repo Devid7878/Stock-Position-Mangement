@@ -672,3 +672,47 @@ tr:hover td { background: var(--bg-card-hover); }
   .pnl-bubble { font-size: 13px; padding: 6px 10px; }
   .analytics-grid { grid-template-columns: 1fr; }
 }
+/* ── User Profile Nav ─────────────────────────────────────────────── */
+.user-profile-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.user-profile-nav:hover {
+  background: var(--bg-input);
+}
+.nav-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-strong);
+}
+.nav-username {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── Profile Modal Specifics ───────────────────────────────────────── */
+.avatar-presets {
+  margin-top: 12px;
+}
+.preset-btn {
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.preset-btn:hover {
+  transform: scale(1.1);
+}
+.preset-btn.active {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px var(--blue-dim);
+}
+@media (max-width: 768px) {
+  .nav-username { display: none; }
+}
