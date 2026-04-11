@@ -11,6 +11,8 @@ app.use(cors({
   credentials: true,
 }));
 
+console.log(process.env.FRONTEND_URL)
+
 const ANGEL_BASE = 'https://apiconnect.angelone.in';
 const {
   ANGEL_API_KEY,
