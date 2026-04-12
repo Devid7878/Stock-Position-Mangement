@@ -6,15 +6,15 @@ import PositionCard from '../components/PositionCard';
 import AddPositionModal from '../components/AddPositionModal';
 import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import { formatCurrency, formatPercent, formatRMultiple } from '../utils/calculations';
-
-const WatchlistPage = lazy(() => import('./WatchlistPage'));
-const PositionSizeCalc = lazy(() => import('../components/PositionSizeCalc'));
-const AnalyticsPage = lazy(() => import('./AnalyticsPage'));
 import {
   Plus, RefreshCw, LayoutGrid, List,
   LogOut, Sun, Moon, Calculator, Table,
   BarChart2, Wallet, ExternalLink, Star
 } from 'lucide-react';
+
+const WatchlistPage = lazy(() => import('./WatchlistPage'));
+const PositionSizeCalc = lazy(() => import('../components/PositionSizeCalc'));
+const AnalyticsPage = lazy(() => import('./AnalyticsPage'));
 
 export default function PositionsPage({ onSelectPosition }) {
   const {

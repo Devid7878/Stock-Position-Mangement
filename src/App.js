@@ -2,6 +2,7 @@ import React, { useState, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { PositionsProvider } from './context/PositionsContext';
+import { AlertsProvider } from './context/AlertsContext';
 import AuthPage from './pages/AuthPage';
 import PositionsPage from './pages/PositionsPage';
 import './App.css';
@@ -49,8 +50,6 @@ function AppRoutes() {
     </>
   );
 }
-
-import { AlertsProvider } from './context/AlertsContext';
 
 export default function App() {
   return (
