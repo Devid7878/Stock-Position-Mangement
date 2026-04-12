@@ -20,6 +20,7 @@ export default function AddPositionModal({ onClose }) {
     strategy: '5MA Safe',
     exchange: 'NSE',
     notes: '',
+    broker: 'upstox',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -91,6 +92,7 @@ export default function AddPositionModal({ onClose }) {
         initialRiskAmount: Math.abs(ep - sl) * sh,
         strategy: formData.strategy,
         notes: formData.notes,
+        broker: formData.broker,
       });
       onClose();
     } catch (err) {
@@ -167,6 +169,13 @@ export default function AddPositionModal({ onClose }) {
             </div>
 
             <div className="form-grid">
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label style={{ marginBottom: 8, display: 'block' }}>Broker Fees Model</label>
+                <div className="exchange-tabs">
+                  <button className={`exchange-tab ${formData.broker === 'upstox' ? 'active' : ''}`} onClick={() => handleChange('broker', 'upstox')}>Upstox</button>
+                  <button className={`exchange-tab ${formData.broker === 'zerodha' ? 'active' : ''}`} onClick={() => handleChange('broker', 'zerodha')}>Zerodha</button>
+                </div>
+              </div>
               <div className="form-group">
                 <label>Entry Price *</label>
                 <input

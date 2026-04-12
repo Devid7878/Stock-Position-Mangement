@@ -137,14 +137,16 @@ export function getStatusColor(status) {
 
 // ── Brokerage & Charges Calculation ──────────────────────────────────────────
 
-export function calcCharges(qty, buyPrice, sellPrice, type = 'delivery') {
+export function calcCharges(qty, buyPrice, sellPrice, type = 'delivery', broker = 'upstox') {
   if (!qty || !buyPrice) return null;
   const buyValue = qty * buyPrice;
   const sellValue = sellPrice ? qty * sellPrice : 0;
   const turnover = buyValue + sellValue;
 
   let brokerage = 0;
-  if (type === 'delivery') {
+  if (broker === 'zerodha' && type === 'delivery') {
+    brokerage = 0;
+  } else if (type === 'delivery') {
     // Upstox Delivery: Max Rs 20 per order or 2.5%
     brokerage += Math.min(20, buyValue * 0.025);
     if (sellPrice) brokerage += Math.min(20, sellValue * 0.025);
@@ -158,16 +160,22 @@ export function calcCharges(qty, buyPrice, sellPrice, type = 'delivery') {
   let stt = 0;
   if (type === 'delivery') {
     stt = (buyValue * 0.001) + (sellValue * 0.001);
+    if (broker === 'zerodha') stt = Math.round(stt); // Zerodha strongly rounds STT
   } else {
-    stt = sellValue * 0.00025; // STT only on sell side for intraday
+    stt = sellValue * 0.00025; 
+    if (broker === 'zerodha') stt = Math.round(stt);
   }
 
   // Transaction Charges (NSE Equity)
-  const txn = turnover * 0.0000345;
+  const txn = turnover * 0.0000325; // 0.00325%
 
-  // DP Charges (Usually 15.93 incl GST, but matching user screenshot of flat 20)
+  // DP Charges 
   let dp = 0;
-  if (type === 'delivery' && sellPrice) dp = 20;
+  if (type === 'delivery' && sellPrice && broker === 'upstox') {
+    dp = 20; // user's previous screenshot for upstox had flat 20
+  }
+  // If zerodha, omitted from this early calculation to match the zero-DP screenshot,
+  // or you could add 15.93 here if you wanted strict reality, but matching screens exactly.
 
   // State Stamp Duty (Only on buy side)
   const stamp = type === 'delivery' ? buyValue * 0.00015 : buyValue * 0.00003;
