@@ -172,7 +172,7 @@ export default function WatchlistPage() {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 300px', gap: 24 }}>
+      <div className="watchlist-grid">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {watchlists.map(w => (
             <div key={w.id} className="glass-panel" style={{ padding: 16, gap: 10 }}>
