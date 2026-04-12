@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { PositionsProvider } from './context/PositionsContext';
 import AuthPage from './pages/AuthPage';
 import PositionsPage from './pages/PositionsPage';
-import PositionDetail from './pages/PositionDetail';
 import './App.css';
+
+const PositionDetail = lazy(() => import('./pages/PositionDetail'));
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -34,24 +35,32 @@ function AppRoutes() {
   if (!user) return <AuthPage />;
 
   return (
-    <PositionsProvider>
+    <>
       {selectedPositionId ? (
-        <PositionDetail
-          positionId={selectedPositionId}
-          onBack={() => setSelectedPositionId(null)}
-        />
+        <Suspense fallback={<div className="app-loading"><div className="spinner large" /><span>Loading Chart Engine...</span></div>}>
+          <PositionDetail
+            positionId={selectedPositionId}
+            onBack={() => setSelectedPositionId(null)}
+          />
+        </Suspense>
       ) : (
         <PositionsPage onSelectPosition={setSelectedPositionId} />
       )}
-    </PositionsProvider>
+    </>
   );
 }
+
+import { AlertsProvider } from './context/AlertsContext';
 
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppRoutes />
+        <PositionsProvider>
+          <AlertsProvider>
+            <AppRoutes />
+          </AlertsProvider>
+        </PositionsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -1,17 +1,19 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { usePositions } from '../context/PositionsContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import PositionCard from '../components/PositionCard';
 import AddPositionModal from '../components/AddPositionModal';
 import ProfileSettingsModal from '../components/ProfileSettingsModal';
-import PositionSizeCalc from '../components/PositionSizeCalc';
-import AnalyticsPage from './AnalyticsPage';
 import { formatCurrency, formatPercent, formatRMultiple } from '../utils/calculations';
+
+const WatchlistPage = lazy(() => import('./WatchlistPage'));
+const PositionSizeCalc = lazy(() => import('../components/PositionSizeCalc'));
+const AnalyticsPage = lazy(() => import('./AnalyticsPage'));
 import {
   Plus, RefreshCw, LayoutGrid, List,
   LogOut, Sun, Moon, Calculator, Table,
-  BarChart2, Wallet, ExternalLink
+  BarChart2, Wallet, ExternalLink, Star
 } from 'lucide-react';
 
 export default function PositionsPage({ onSelectPosition }) {
@@ -98,6 +100,7 @@ export default function PositionsPage({ onSelectPosition }) {
         <div className="navbar-center">
           <button className={`nav-tab ${activeTab === 'active' ? 'active' : ''}`} onClick={() => handleTabChange('active')}>Active</button>
           <button className={`nav-tab ${activeTab === 'closed' ? 'active' : ''}`} onClick={() => handleTabChange('closed')}><Table size={13} /> Trades</button>
+          <button className={`nav-tab ${activeTab === 'watchlist' ? 'active' : ''}`} onClick={() => handleTabChange('watchlist')}><Star size={13} /> Watchlist</button>
           <button className={`nav-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => handleTabChange('analytics')}><BarChart2 size={13} /> Analytics</button>
           <button className={`nav-tab ${activeTab === 'calculator' ? 'active' : ''}`} onClick={() => handleTabChange('calculator')}><Calculator size={13} /> Calc</button>
         </div>
@@ -123,8 +126,21 @@ export default function PositionsPage({ onSelectPosition }) {
       </nav>
 
       <main className="positions-main">
-        {activeTab === 'calculator' && <PositionSizeCalc />}
-        {activeTab === 'analytics' && <AnalyticsPage />}
+        {activeTab === 'calculator' && (
+          <Suspense fallback={<div className="app-loading"><div className="spinner large" /><span>Loading Engine...</span></div>}>
+            <PositionSizeCalc />
+          </Suspense>
+        )}
+        {activeTab === 'analytics' && (
+          <Suspense fallback={<div className="app-loading"><div className="spinner large" /><span>Analyzing Computations...</span></div>}>
+            <AnalyticsPage />
+          </Suspense>
+        )}
+        {activeTab === 'watchlist' && (
+          <Suspense fallback={<div className="app-loading"><div className="spinner large" /><span>Loading Assets...</span></div>}>
+            <WatchlistPage />
+          </Suspense>
+        )}
 
         {activeTab === 'active' && (
           <>

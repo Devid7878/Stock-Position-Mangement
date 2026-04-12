@@ -1,15 +1,20 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { usePositions } from '../context/PositionsContext';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  BarChart, Bar, Cell
+  BarChart, Bar, Cell, Line, ComposedChart
 } from 'recharts';
 import { formatCurrency, calcCharges, getPnlColor } from '../utils/calculations';
+import angelOneService from '../services/angelOne';
 import { TrendingUp, Inbox, Calendar, PieChart, Activity, DollarSign, Percent, ShieldAlert } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const { positions } = usePositions();
   const [timeframe, setTimeframe] = useState('monthly'); // 'monthly', 'quarterly', 'yearly'
+  
+  const [benchmarkToken, setBenchmarkToken] = useState('');
+  const [benchmarkCandles, setBenchmarkCandles] = useState([]);
+  const [loadingBenchmark, setLoadingBenchmark] = useState(false);
   
   // Filter for realized trades
   const realizedTrades = useMemo(() => 
@@ -131,6 +136,61 @@ export default function AnalyticsPage() {
       return { name: `T${i + 1}`, value: cumulative };
     });
   }, [processedTrades]);
+
+  useEffect(() => {
+    if (!benchmarkToken || !hasData) {
+      setBenchmarkCandles([]);
+      return;
+    }
+    const fetchBenchmark = async () => {
+      setLoadingBenchmark(true);
+      try {
+        const fromDate = new Date(realizedTrades[0].updated_at).toISOString().split('T')[0] + ' 00:00';
+        const toDate = new Date().toISOString().split('T')[0] + ' 15:30';
+        
+        const candles = await angelOneService.getCandleData({
+          exchange: 'NSE',
+          symbolToken: benchmarkToken,
+          interval: 'ONE_DAY',
+          fromDate,
+          toDate
+        });
+        setBenchmarkCandles(candles || []);
+      } catch (err) {
+        console.error('Benchmark fetch err:', err);
+      } finally {
+        setLoadingBenchmark(false);
+      }
+    };
+    fetchBenchmark();
+  }, [benchmarkToken, hasData, realizedTrades]);
+
+  const combinedCurve = useMemo(() => {
+    if (!benchmarkToken || !benchmarkCandles.length) return equityData;
+
+    let cumulative = 0;
+    const dailyEquity = {};
+    processedTrades.forEach(p => {
+      cumulative += p.net;
+      const dStr = new Date(p.updated_at).toISOString().split('T')[0];
+      dailyEquity[dStr] = cumulative;
+    });
+
+    const result = [];
+    let lastEq = 0;
+    
+    benchmarkCandles.forEach(c => {
+      // AngelOne returns ISO string or timestamp
+      const dateStr = new Date(c[0]).toISOString().split('T')[0];
+      if (dailyEquity[dateStr] !== undefined) lastEq = dailyEquity[dateStr];
+      result.push({
+        name: dateStr.substring(5), // MM-DD
+        value: lastEq,
+        indexValue: c[4] // close price
+      });
+    });
+    return result;
+  }, [equityData, processedTrades, benchmarkToken, benchmarkCandles]);
 
   const rMultipleData = useMemo(() => {
     const map = { '< -1R': 0, '-1R to 0R': 0, '0R to 1R': 0, '1R to 2R': 0, '> 2R': 0 };
@@ -354,12 +414,24 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="glass-panel chart-panel">
-            <div className="panel-header">
-               <h3><TrendingUp size={18}/> Net Equity Curve</h3>
+            <div className="panel-header" style={{ alignItems: 'center' }}>
+               <h3><TrendingUp size={18}/> Net Equity vs Benchmark</h3>
+               <select 
+                 className="sl-input" 
+                 style={{ width: 150, padding: '4px 8px', fontSize: 12 }}
+                 value={benchmarkToken}
+                 onChange={e => setBenchmarkToken(e.target.value)}
+               >
+                 <option value="">No Benchmark</option>
+                 <option value="99926000">NIFTY 50</option>
+                 <option value="99926009">NIFTY BANK</option>
+                 <option value="99926017">NIFTY 500</option>
+                 <option value="99926012">NIFTY SMALLCAP</option>
+               </select>
             </div>
             <div className="chart-wrapper">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={equityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <ComposedChart data={combinedCurve} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorNetPnl" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--green)" stopOpacity={0.6}/>
@@ -368,15 +440,25 @@ export default function AnalyticsPage() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
                   <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v/1000}k`} />
+                  <YAxis yAxisId="left" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v/1000}k`} />
+                  
+                  {benchmarkToken && (
+                     <YAxis yAxisId="right" orientation="right" stroke="var(--blue)" fontSize={11} tickLine={false} axisLine={false} domain={['auto','auto']} />
+                  )}
+                  
                   <RechartsTooltip 
                     cursor={{stroke: 'var(--border-strong)', strokeWidth: 1}}
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }}
-                    formatter={(value) => [formatCurrency(value), 'Net Equity']}
+                    formatter={(value, name) => [name === 'value' ? formatCurrency(value) : value, name === 'value' ? 'Net Equity' : 'Index Close']}
                   />
-                  <Area type="monotone" dataKey="value" stroke="var(--green)" strokeWidth={3} fillOpacity={1} fill="url(#colorNetPnl)" />
-                </AreaChart>
+                  <Area yAxisId="left" type="monotone" dataKey="value" stroke="var(--green)" strokeWidth={3} fillOpacity={1} fill="url(#colorNetPnl)" />
+                  
+                  {benchmarkToken && combinedCurve[0]?.indexValue && (
+                     <Line yAxisId="right" type="monotone" dataKey="indexValue" stroke="var(--blue)" strokeWidth={2} dot={false} activeDot={{r: 4}} />
+                  )}
+                </ComposedChart>
               </ResponsiveContainer>
+              {loadingBenchmark && <div style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--text-muted)'}}>Loading Market Data...</div>}
             </div>
           </div>
           
