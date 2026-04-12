@@ -134,3 +134,70 @@ export function getStatusColor(status) {
   if (status === 'closed') return '#94a3b8';
   return '#f59e0b';
 }
+
+// ── Brokerage & Charges Calculation ──────────────────────────────────────────
+
+export function calcCharges(qty, buyPrice, sellPrice, type = 'delivery') {
+  if (!qty || !buyPrice) return null;
+  const buyValue = qty * buyPrice;
+  const sellValue = sellPrice ? qty * sellPrice : 0;
+  const turnover = buyValue + sellValue;
+
+  let brokerage = 0;
+  if (type === 'delivery') {
+    // Upstox Delivery: Max Rs 20 per order or 2.5%
+    brokerage += Math.min(20, buyValue * 0.025);
+    if (sellPrice) brokerage += Math.min(20, sellValue * 0.025);
+  } else {
+    // Intraday: Max Rs 20 per order or 0.05%
+    brokerage += Math.min(20, buyValue * 0.0005);
+    if (sellPrice) brokerage += Math.min(20, sellValue * 0.0005);
+  }
+
+  // STT / CTT
+  let stt = 0;
+  if (type === 'delivery') {
+    stt = (buyValue * 0.001) + (sellValue * 0.001);
+  } else {
+    stt = sellValue * 0.00025; // STT only on sell side for intraday
+  }
+
+  // Transaction Charges (NSE Equity)
+  const txn = turnover * 0.0000345;
+
+  // DP Charges (Usually 15.93 incl GST, but matching user screenshot of flat 20)
+  let dp = 0;
+  if (type === 'delivery' && sellPrice) dp = 20;
+
+  // State Stamp Duty (Only on buy side)
+  const stamp = type === 'delivery' ? buyValue * 0.00015 : buyValue * 0.00003;
+
+  // SEBI Turnover Fees (Rs 10 / Crore)
+  const sebi = turnover * 0.000001;
+
+  // GST (18% on Brokerage + Transaction + SEBI + DP Charges)
+  const gst = 0.18 * (brokerage + txn + sebi + dp);
+
+  const totalCharges = brokerage + stt + txn + dp + stamp + sebi + gst;
+  
+  const grossPnl = sellPrice ? (sellPrice - buyPrice) * qty : 0;
+  const netPnl = grossPnl - totalCharges;
+
+  // Calculate Breakeven (Total Charges / Qty)
+  const breakEvenPoints = totalCharges / qty;
+
+  return {
+    turnover,
+    brokerage,
+    stt,
+    txn,
+    dp,
+    stamp,
+    sebi,
+    gst,
+    totalCharges,
+    grossPnl,
+    netPnl,
+    breakEvenPoints
+  };
+}
