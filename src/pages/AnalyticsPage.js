@@ -132,6 +132,44 @@ export default function AnalyticsPage() {
     });
   }, [processedTrades]);
 
+  const rMultipleData = useMemo(() => {
+    const map = { '< -1R': 0, '-1R to 0R': 0, '0R to 1R': 0, '1R to 2R': 0, '> 2R': 0 };
+    processedTrades.forEach(p => {
+      const risk = (p.initial_risk_amount && parseFloat(p.initial_risk_amount) !== 0)
+        ? parseFloat(p.initial_risk_amount)
+        : Math.abs((p.entry_price - (p.original_sl || p.stop_loss || 0))) * (p.shares || 1);
+        
+      const R = (risk > 1) ? p.net / risk : 0;
+      if (R <= -1) map['< -1R']++;
+      else if (R <= 0) map['-1R to 0R']++;
+      else if (R <= 1) map['0R to 1R']++;
+      else if (R <= 2) map['1R to 2R']++;
+      else map['> 2R']++;
+    });
+    return Object.entries(map).map(([name, count]) => ({ name, count }));
+  }, [processedTrades]);
+
+  const strategyData = useMemo(() => {
+    const map = {};
+    processedTrades.forEach(p => {
+      const s = p.strategy || 'Other';
+      if (!map[s]) map[s] = { name: s, net: 0 };
+      map[s].net += p.net;
+    });
+    return Object.values(map).sort((a,b) => b.net - a.net);
+  }, [processedTrades]);
+
+  const weekdayData = useMemo(() => {
+    const map = { 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0 };
+    processedTrades.forEach(p => {
+       const w = new Date(p.updated_at).toLocaleDateString('en-US', { weekday: 'short' });
+       if (map[w] !== undefined) {
+         map[w] += p.net;
+       }
+    });
+    return Object.entries(map).map(([name, net]) => ({ name, net }));
+  }, [processedTrades]);
+
   if (!hasData) {
     return (
       <div className="analytics-page empty-dashboard">
@@ -231,18 +269,42 @@ export default function AnalyticsPage() {
              <div className="chart-wrapper">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={periodData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#8b9bb4" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#8b9bb4" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v/1000}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v/1000}k`} />
                     <RechartsTooltip 
-                      cursor={{fill: 'rgba(255,255,255,0.02)'}}
-                      contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }}
+                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }}
                       formatter={(value, name) => [formatCurrency(value), name === 'net' ? 'Net P&L' : name === 'gross' ? 'Gross P&L' : 'Charges']}
                     />
-                    <Bar dataKey="gross" fill="rgba(45, 212, 191, 0.2)" radius={[4, 4, 0, 0]} name="Gross P&L" />
+                    <Bar dataKey="gross" fill="var(--teal)" fillOpacity={0.4} radius={[4, 4, 0, 0]} name="Gross P&L" />
                     <Bar dataKey="net" radius={[4, 4, 0, 0]} name="Net P&L">
                       {periodData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.net >= 0 ? '#10b981' : '#ef4444'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
+          
+          <div className="glass-panel">
+             <div className="panel-header">
+                <h3><Activity size={18} /> Strategy Net P&L</h3>
+             </div>
+             <div className="chart-wrapper">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={strategyData} layout="vertical" margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" horizontal={false} />
+                    <XAxis type="number" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v/1000}k`} />
+                    <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                    <RechartsTooltip 
+                      cursor={{fill: 'var(--border-strong)'}}
+                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }}
+                      formatter={(value) => [formatCurrency(value), 'Net Profit']}
+                    />
+                    <Bar dataKey="net" radius={[0, 4, 4, 0]}>
+                      {strategyData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.net >= 0 ? 'var(--blue)' : '#ef4444'} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -260,32 +322,32 @@ export default function AnalyticsPage() {
             </div>
             <div className="taxes-list">
                <div className="tax-row">
-                 <div className="t-info"><div className="t-dot" style={{background: '#3b82f6'}}></div> Brokerage</div>
+                 <div className="t-info"><div className="t-dot" style={{background: 'var(--blue)'}}></div> Brokerage</div>
                  <strong>{formatCurrency(globalStats.taxes.brokerage)}</strong>
                </div>
                <div className="tax-row">
-                 <div className="t-info"><div className="t-dot" style={{background: '#8b5cf6'}}></div> STT / CTT</div>
+                 <div className="t-info"><div className="t-dot" style={{background: 'var(--amber)'}}></div> STT / CTT</div>
                  <strong>{formatCurrency(globalStats.taxes.stt)}</strong>
                </div>
                <div className="tax-row">
-                 <div className="t-info"><div className="t-dot" style={{background: '#ec4899'}}></div> Exchange Txn</div>
+                 <div className="t-info"><div className="t-dot" style={{background: 'var(--teal)'}}></div> Exchange Txn</div>
                  <strong>{formatCurrency(globalStats.taxes.txn)}</strong>
                </div>
                <div className="tax-row">
-                 <div className="t-info"><div className="t-dot" style={{background: '#f59e0b'}}></div> DP Charges</div>
+                 <div className="t-info"><div className="t-dot" style={{background: 'var(--orange)'}}></div> DP Charges</div>
                  <strong>{formatCurrency(globalStats.taxes.dp)}</strong>
                </div>
                <div className="tax-row">
-                 <div className="t-info"><div className="t-dot" style={{background: '#10b981'}}></div> Stamp Duty</div>
+                 <div className="t-info"><div className="t-dot" style={{background: 'var(--green)'}}></div> Stamp Duty</div>
                  <strong>{formatCurrency(globalStats.taxes.stamp)}</strong>
                </div>
                <div className="tax-row">
-                 <div className="t-info"><div className="t-dot" style={{background: '#14b8a6'}}></div> SEBI Fees</div>
+                 <div className="t-info"><div className="t-dot" style={{background: '#8b5cf6'}}></div> SEBI Fees</div>
                  <strong>{formatCurrency(globalStats.taxes.sebi)}</strong>
                </div>
                <div className="tax-divider"></div>
                <div className="tax-row gst-row">
-                 <div className="t-info"><div className="t-dot" style={{background: '#ef4444'}}></div> GST (18%)</div>
+                 <div className="t-info"><div className="t-dot" style={{background: 'var(--red)'}}></div> GST (18%)</div>
                  <strong>{formatCurrency(globalStats.taxes.gst)}</strong>
                </div>
             </div>
@@ -300,22 +362,78 @@ export default function AnalyticsPage() {
                 <AreaChart data={equityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorNetPnl" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.6}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--green)" stopOpacity={0.6}/>
+                      <stop offset="95%" stopColor="var(--green)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="name" stroke="#8b9bb4" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#8b9bb4" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v/1000}k`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v/1000}k`} />
                   <RechartsTooltip 
-                    cursor={{stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1}}
-                    contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }}
+                    cursor={{stroke: 'var(--border-strong)', strokeWidth: 1}}
+                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }}
                     formatter={(value) => [formatCurrency(value), 'Net Equity']}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorNetPnl)" />
+                  <Area type="monotone" dataKey="value" stroke="var(--green)" strokeWidth={3} fillOpacity={1} fill="url(#colorNetPnl)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+          </div>
+          
+          <div className="glass-panel">
+             <div className="panel-header">
+                <h3><Activity size={18} /> R-Multiple Distribution</h3>
+             </div>
+             <div className="chart-wrapper" style={{ height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={rMultipleData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <RechartsTooltip 
+                      cursor={{fill: 'var(--border-strong)'}}
+                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }}
+                      formatter={(value) => [value, 'Trades']}
+                    />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                      {rMultipleData.map((entry, index) => {
+                        let cf = 'var(--text-muted)';
+                        if (entry.name === '< -1R') cf = '#ef4444';
+                        else if (entry.name === '-1R to 0R') cf = '#fca5a5';
+                        else if (entry.name === '0R to 1R') cf = 'var(--blue)';
+                        else if (entry.name === '1R to 2R') cf = '#34d399';
+                        else if (entry.name === '> 2R') cf = '#10b981';
+                        return <Cell key={`cell-${index}`} fill={cf} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
+          
+          <div className="glass-panel">
+             <div className="panel-header">
+                <h3><Calendar size={18} /> Weekday Performance</h3>
+             </div>
+             <div className="chart-wrapper" style={{ height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weekdayData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v/1000}k`} />
+                    <RechartsTooltip 
+                      cursor={{fill: 'var(--border-strong)'}}
+                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }}
+                      formatter={(value) => [formatCurrency(value), 'Net Profit']}
+                    />
+                    <Bar dataKey="net" radius={[4, 4, 0, 0]}>
+                      {weekdayData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.net >= 0 ? 'var(--blue)' : '#ef4444'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+             </div>
           </div>
         </div>
       </div>

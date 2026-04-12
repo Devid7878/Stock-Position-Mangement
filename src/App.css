@@ -802,22 +802,18 @@ tr:hover td { background: var(--bg-card-hover); }
 .hero-card {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 28px 32px;
   display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .hero-card:hover { transform: translateY(-4px); }
-.hero-card::before {
-  content: ''; position: absolute; inset: 0; opacity: 0.05; background-size: 20px 20px;
-  background-image: radial-gradient(circle at center, white 1px, transparent 1px); pointer-events: none;
-}
-.gross-card { background: linear-gradient(135deg, var(--bg-card) 0%, #151d20 100%); }
-.tax-card { background: linear-gradient(135deg, var(--bg-card) 0%, #201314 100%); }
-.net-card { background: linear-gradient(135deg, var(--bg-card) 0%, #142017 100%); border-color: rgba(16,185,129,0.3); }
+.gross-card { border-bottom: 3px solid var(--blue); }
+.tax-card { border-bottom: 3px solid var(--red); }
+.net-card { border-bottom: 3px solid var(--green); }
 
 .card-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
-.hero-value { font-size: 46px; font-weight: 900; font-family: var(--font-mono); letter-spacing: -0.04em; margin-top: 4px; line-height: 1.1; }
+.hero-value { font-size: 46px; font-weight: 900; font-family: var(--font-mono); letter-spacing: -0.04em; margin-top: 4px; line-height: 1.1; color: var(--text-primary); }
 .text-red { color: var(--red); }
-.text-gradient-green { background: linear-gradient(to right, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.text-gradient-green { color: var(--green); }
 .card-subtext { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin-top: 8px; }
 
 .main-analytics-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
@@ -825,7 +821,7 @@ tr:hover td { background: var(--bg-card-hover); }
 .right-col { display: flex; flex-direction: column; gap: 24px; }
 
 .glass-panel {
-  background: rgba(24, 24, 27, 0.6); backdrop-filter: blur(16px);
+  background: var(--bg-card);
   border: 1px solid var(--border-strong); border-radius: var(--radius-xl); padding: 28px;
   box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 24px;
 }
