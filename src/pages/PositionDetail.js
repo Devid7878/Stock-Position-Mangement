@@ -18,7 +18,7 @@ import { ArrowLeft, Plus, Shield, Lock, PieChart } from 'lucide-react';
 
 
 export default function PositionDetail({ positionId, onBack }) {
-  const { positions, getLivePrice, editPosition, sellPosition } = usePositions();
+  const { positions, getLivePrice, editPosition, sellPosition, loading } = usePositions();
   const position = positions.find((p) => p.id === positionId);
 
   const isClosed = position?.status === 'closed';
@@ -178,6 +178,7 @@ export default function PositionDetail({ positionId, onBack }) {
     }
   };
 
+  if (loading) return <div className="detail-empty"><div className="app-loading" style={{ height: 'auto', background: 'transparent' }}><div className="spinner large" /><span style={{ marginTop: 16 }}>Loading Trade Matrix...</span></div></div>;
   if (!position) return <div className="detail-empty"><button className="back-btn" onClick={onBack}><ArrowLeft size={16}/> Back</button><p>Position not found.</p></div>;
 
   const isSafe = cmp > (position.stop_loss || 0);

@@ -14,7 +14,7 @@ const PositionsContext = createContext(null);
 const initialState = {
   positions: [],
   livePrices: {}, // { symbolToken: ltp }
-  loading: false,
+  loading: true,
   error: null,
   filter: 'active', // 'active' | 'closed' | 'all'
   needsAction: false,

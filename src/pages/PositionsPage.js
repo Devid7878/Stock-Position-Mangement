@@ -22,6 +22,7 @@ export default function PositionsPage({ onSelectPosition }) {
     loadPositions,
     setFilter,
     getLivePrice,
+    loading
   } = usePositions();
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -143,6 +144,12 @@ export default function PositionsPage({ onSelectPosition }) {
         )}
 
         {activeTab === 'active' && (
+          loading ? (
+            <div className="app-loading" style={{ height: '50vh', background: 'transparent' }}>
+              <div className="spinner large" />
+              <span style={{ marginTop: 16 }}>Synchronizing Live Market Data...</span>
+            </div>
+          ) :
           <>
             <div className="portfolio-summary">
               <div className="summary-card">

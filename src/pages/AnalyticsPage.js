@@ -9,7 +9,7 @@ import angelOneService from '../services/angelOne';
 import { TrendingUp, Inbox, Calendar, PieChart, Activity, DollarSign, Percent, ShieldAlert } from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const { positions } = usePositions();
+  const { positions, loading } = usePositions();
   const [timeframe, setTimeframe] = useState('monthly'); // 'monthly', 'quarterly', 'yearly'
   
   const [benchmarkToken, setBenchmarkToken] = useState('');
@@ -229,6 +229,19 @@ export default function AnalyticsPage() {
     });
     return Object.entries(map).map(([name, net]) => ({ name, net }));
   }, [processedTrades]);
+
+  if (loading) {
+    return (
+      <div className="analytics-page empty-dashboard">
+        <div className="empty-state">
+          <div className="app-loading" style={{ height: 'auto', background: 'transparent' }}>
+            <div className="spinner large" />
+            <span style={{ marginTop: 16 }}>Synchronizing Terminal Data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasData) {
     return (
